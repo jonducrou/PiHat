@@ -10,7 +10,7 @@ sudo reboot
 
 sudo apt-get update
 sudo apt-get upgrade
-sudo apt-get install avahi-daemon vim
+sudo apt-get install avahi-daemon vim vlc
 
 
 sudo nano /etc/network/interfaces 
@@ -28,6 +28,11 @@ sudo nano /etc/network/interfaces
 #wpa-psk <YOUR PASSPHRASE/KEY>
 
 sudo reboot
+
+nano /boot/config.txt
+# set disable_camera_led=1
+
+http://www.raspberrypi.org/phpBB3/viewtopic.php?&t=52071
 
 
 
