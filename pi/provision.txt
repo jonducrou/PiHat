@@ -7,10 +7,13 @@ sudo nano /etc/hostname
 sudo /etc/init.d/hostname.sh
 sudo reboot
 
+sudo nano /etc/apt/sources.list
+# deb http://vontaene.de/raspbian-updates/ . main
+
 
 sudo apt-get update
 sudo apt-get upgrade
-sudo apt-get install avahi-daemon vim vlc
+sudo apt-get install avahi-daemon vim vlc daemontools gstreamer1.0
 
 
 sudo nano /etc/network/interfaces 
@@ -32,8 +35,10 @@ sudo reboot
 nano /boot/config.txt
 # set disable_camera_led=1
 
-http://www.raspberrypi.org/phpBB3/viewtopic.php?&t=52071
 
+get clone http://github.com/jonducrou/PiHat
 
+sudo ln -s /home/pi/PiHat/pi/PiHatDaemon /etc/init.d/
+sudo update-rc.d PiHatDaemon defaults 
 
 
