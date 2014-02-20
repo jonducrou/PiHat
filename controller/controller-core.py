@@ -47,19 +47,47 @@ access_token_secret="u6U0zXHkaxwI6O1qtLcu94wgn6DY7teCUiZaWjS7RS8Nl"
 
 tw = textwrap.TextWrapper(width=80)
 
+#effects
+smiley_face="smiley face"
+vertical_hold="vhold"
+trippy_colours="trippy"
+effect_off="effect off"  #admin effect
+
+#screen sizes
+pic_in_pic="pic in pic"
+full_video="video"
+full_camera="camera"
+off="off"    #admin control
+
+#defaults
+default_effect=effect_off
+default_screen=pic_in_pic
+
 class StdOutListener(StreamListener):
     """ A listener handles tweets are the received from the stream.
     This is a basic listener that just prints received tweets to stdout.
 
     """
+
+    effect=default_effect
+    screen_size=default_screen
+    admin=False
+
     def on_data(self, data):
-        global a_time_to_die, stream
+        global a_time_to_die, stream, admin, effect, screen_size
         if a_time_to_die:
           return False
+        user_name = json.loads(data)['user']['screen_name'].encode('utf-8')
+        tweet_text = json.loads(data)['text'].encode('utf-8')
+        if user_name == "kangahooroo":
+            admin = True
+        effect = calculate_effect(tweet_text)
+        screen_size = calculate_screen(tweet_text)
+        admin = False  #set back to false after calculating effect so admin doesn't stay on
         text = "[b]"
-        text += json.loads(data)['user']['screen_name'].encode('utf-8')
+        text += user_name
         text += "[/b]: "
-        text += json.loads(data)['text'].encode('utf-8')
+        text += tweet_text
         text = '\n'.join(tw.wrap(text))
         tweets.append((text,int(round(time.time() * 1000))))
         update_text()
@@ -68,6 +96,28 @@ class StdOutListener(StreamListener):
 
     def on_error(self, status):
         print status
+
+    def calculate_effect(self, tweet_text):
+        if tweet_text.contains(smiley_face):
+            return smiley_face
+        if tweet_text.contains(vertical_hold):
+            return vertical_hold
+        if tweet_text.contains(trippy_colours):
+            return trippu_colours
+        if tweet_text.contains(effect_off) and admin:
+            return effect_off
+        return default_effect
+
+    def calculate_screen(self, tweet_text):
+        if tweet_text.contains(pic_in_pic):
+            return pic_in_pic
+        if tweet_text.contains(full_video):
+            return full_video
+        if tweet_text.contains(full_camera):
+            return full_camerac
+        if tweet_text.contains(off) and admin:
+            return off
+        return default_screen
 
 if __name__ == '__main__': 
     l = StdOutListener()
