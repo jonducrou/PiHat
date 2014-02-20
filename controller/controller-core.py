@@ -59,20 +59,16 @@ full_video="video"
 full_camera="camera"
 off="off"    #admin control
 
-#defaults
-default_effect=effect_off
-default_screen=pic_in_pic
+#initial values
+effect=effect_off
+screen_size=pic_in_pic
+admin=False
 
 class StdOutListener(StreamListener):
     """ A listener handles tweets are the received from the stream.
     This is a basic listener that just prints received tweets to stdout.
 
     """
-
-    effect=default_effect
-    screen_size=default_screen
-    admin=False
-
     def on_data(self, data):
         global a_time_to_die, stream, admin, effect, screen_size
         if a_time_to_die:
@@ -106,7 +102,7 @@ class StdOutListener(StreamListener):
             return trippu_colours
         if tweet_text.contains(effect_off) and admin:
             return effect_off
-        return default_effect
+        return effect
 
     def calculate_screen(self, tweet_text):
         if tweet_text.contains(pic_in_pic):
@@ -117,7 +113,7 @@ class StdOutListener(StreamListener):
             return full_camerac
         if tweet_text.contains(off) and admin:
             return off
-        return default_screen
+        return screen_size
 
 if __name__ == '__main__': 
     l = StdOutListener()
