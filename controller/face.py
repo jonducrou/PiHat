@@ -4,12 +4,13 @@ import cv2
 
 face_cascade = cv2.CascadeClassifier('/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml')
 
-faces = 'fuck you'
+faces = None
 
 def detect(img, faces):
+    global faces
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    if faces == 'fuck you' or skip % 10 == 0:
-       faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     for (x,y,w,h) in faces:
         cv2.circle(img, (x+w/2, y+h/2), w/2, (0,255,255), -1 )
         cv2.circle(img, (x+w/3, y+h/5), w/10, (0,0,0), -1 )
