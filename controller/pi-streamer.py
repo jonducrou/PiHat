@@ -67,6 +67,7 @@ class Player(Gtk.Window):
     def on_message(self, bus, message):
         
         t = message.type
+        print t
         if t == Gst.MessageType.EOS:
             self.player.set_state(Gst.State.NULL)
             self.on_quit(None)
@@ -100,6 +101,7 @@ def start_server():
   HOST = ''                 # Symbolic name meaning the local host
   PORT = 12345              # Arbitrary non-privileged port  
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  socket.timeout(10)
   try:
     s.bind((HOST, PORT))
   except:

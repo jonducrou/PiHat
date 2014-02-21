@@ -24,6 +24,7 @@ import socket
 import cv2
 import numpy
 import pickle
+from functools import partial
 
 from PIL import Image
 import zbar
@@ -77,8 +78,8 @@ class StdOutListener(StreamListener):
         tweet_text = json.loads(data)['text'].encode('utf-8')
         if user_name == "kangahooroo":
             admin = True
-        effect = calculate_effect(tweet_text)
-        screen_size = calculate_screen(tweet_text)
+        effect = self.calculate_effect(tweet_text)
+        screen_size = self.calculate_screen(tweet_text)
         admin = False  #set back to false after calculating effect so admin doesn't stay on
         text = "[b]"
         text += user_name
@@ -94,24 +95,24 @@ class StdOutListener(StreamListener):
         print status
 
     def calculate_effect(self, tweet_text):
-        if tweet_text.contains(smiley_face):
+        if smiley_face in tweet_text:
             return smiley_face
-        if tweet_text.contains(vertical_hold):
+        if vertical_hold in tweet_text:
             return vertical_hold
-        if tweet_text.contains(trippy_colours):
-            return trippu_colours
-        if tweet_text.contains(effect_off) and admin:
+        if trippy_colours in tweet_text:
+            return trippy_colours
+        if effect_off in tweet_text and admin:
             return effect_off
         return effect
 
     def calculate_screen(self, tweet_text):
-        if tweet_text.contains(pic_in_pic):
+        if pic_in_pic in tweet_text:
             return pic_in_pic
-        if tweet_text.contains(full_video):
+        if full_video in tweet_text:
             return full_video
-        if tweet_text.contains(full_camera):
+        if full_camera in tweet_text:
             return full_camerac
-        if tweet_text.contains(off) and admin:
+        if off in tweet_text and admin:
             return off
         return screen_size
 
@@ -128,7 +129,7 @@ if __name__ == '__main__':
 
 tweets = []
 
-def update_text():
+def update_text(dt=0):
   global tweets
   millis = int(round(time.time() * 1000))
   x = []
@@ -149,17 +150,21 @@ def recvall(sock):
         data+=part
     return data
 
-def on_position_change(instance, value):
+def on_position_change(instance, value=0):
   global pv
   global feed_data, feed_width, feed_height, feed_ready
   if int(value) > pv:
     pv = value
-    update_text()
+
+def camera_loop(instance, dt=0):
+  global feed_ready
   if feed_ready:  
     texture = Texture.create(size=(feed_width, feed_height))
     texture.blit_buffer(feed_data, colorfmt='rgb', bufferfmt='ubyte')
     instance.canvas.after.clear()
+# FULL SCREEN
     instance.canvas.after.add(Rectangle(texture=texture, pos=(0,0), size=(instance.width, instance.height)))
+# PIC IN PIC
 #    instance.canvas.after.add(Rectangle(texture=texture, pos=(instance.width - feed_width, instance.height-feed_height), size=(feed_width, feed_height)))
     feed_ready = False
 
@@ -176,7 +181,7 @@ tweet = Label(text='Hello! ',pos=(0,-180), markup=True, font_size=28)
 
 
 class FullVideo(Video):
-    pass
+    
     def get_norm_image_size(self):
         if not self.texture:
             return self.size
@@ -238,9 +243,11 @@ class VideoPlayerApp(App):
         else:
             curdir = dirname(__file__)
             filename = join(curdir, 'softboy.avi')
+        Window.clearcolor = (0, 0, 0, 1)
         layout = FloatLayout(size=(300, 300))
         self.v = FullVideo(source=filename, state='play', volume = 0, options={'allow_stretch': True})#, pos_hint={'y':.2})
-        
+        Clock.schedule_interval(partial(camera_loop, self.v), 0.05)
+        Clock.schedule_interval(update_text,1)
         self.v.bind(position=on_position_change)
         layout.add_widget(self.v)
         Window.bind(on_key_down=on_key)
@@ -285,22 +292,27 @@ class VideoPlayerApp(App):
 #            print "qr fail"
 
 #            data = cv2.flip(detect_faces(cv2.flip(data, 0)),0)
-#          except:
-#            print "face fail"
+ #         except:
+  #          print "face fail"
 
-            shift += 1
-            data += shift % 256
+#            shift += 1
+ #           data += shift % 256
+  #        except:
+   #         print "shift fail"
+
+            shift += 10
+            M = numpy.float32([[1,0,0],[0,1,shift%height]])
+            data1 = cv2.warpAffine(data,M,(width,height))
+            M = numpy.float32([[1,0,0],[0,1,(shift%height)-height]])
+            data2 = cv2.warpAffine(data,M,(width,height))
+            data = data1 + data2
+            M = numpy.float32([[1,0,shift%width],[0,1,0]])
+            data1 = cv2.warpAffine(data,M,(width,height))
+            M = numpy.float32([[1,0,(shift%width)-width],[0,1,0]])
+            data2 = cv2.warpAffine(data,M,(width,height))
+            data = data1 + data2
           except:
-            print "shift fail"
-
-#            shift += 10
- #           M = numpy.float32([[1,0,0],[0,1,shift%height]])
-  #          data1 = cv2.warpAffine(data,M,(width,height))
-   #         M = numpy.float32([[1,0,0],[0,1,(shift%height)-height]])
-    #        data2 = cv2.warpAffine(data,M,(width,height))
-     #       data = data1 + data2
-      #    except:
-       #     print "vhold fail"
+            print "vhold fail"
 
           data = cv2.cvtColor(data,cv2.COLOR_BGR2RGB)
           feed_data = data.tostring()
