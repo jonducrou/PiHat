@@ -26,8 +26,7 @@ class Player(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self)
         self.image = None
-        GLib.timeout_add(100, self.save_image)
-        self.hide()
+        GLib.timeout_add(50, self.save_image)
         self.connect("delete-event", self.on_quit)
         # Status
         self.status = Gst.State.NULL

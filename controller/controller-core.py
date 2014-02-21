@@ -24,6 +24,10 @@ import socket
 import cv2
 import numpy
 import pickle
+
+from PIL import Image
+import zbar
+
 from threading import Thread
 
 feed_thread = None
@@ -43,19 +47,43 @@ access_token_secret="u6U0zXHkaxwI6O1qtLcu94wgn6DY7teCUiZaWjS7RS8Nl"
 
 tw = textwrap.TextWrapper(width=80)
 
+#effects
+smiley_face="smiley face"
+vertical_hold="vhold"
+trippy_colours="trippy"
+effect_off="effect off"  #admin effect
+
+#screen sizes
+pic_in_pic="pic in pic"
+full_video="video"
+full_camera="camera"
+off="off"    #admin control
+
+#initial values
+effect=effect_off
+screen_size=pic_in_pic
+admin=False
+
 class StdOutListener(StreamListener):
     """ A listener handles tweets are the received from the stream.
     This is a basic listener that just prints received tweets to stdout.
 
     """
     def on_data(self, data):
-        global a_time_to_die
+        global a_time_to_die, stream, admin, effect, screen_size
         if a_time_to_die:
-          self.disconnect()
+          return False
+        user_name = json.loads(data)['user']['screen_name'].encode('utf-8')
+        tweet_text = json.loads(data)['text'].encode('utf-8')
+        if user_name == "kangahooroo":
+            admin = True
+        effect = calculate_effect(tweet_text)
+        screen_size = calculate_screen(tweet_text)
+        admin = False  #set back to false after calculating effect so admin doesn't stay on
         text = "[b]"
-        text += json.loads(data)['user']['screen_name'].encode('utf-8')
+        text += user_name
         text += "[/b]: "
-        text += json.loads(data)['text'].encode('utf-8')
+        text += tweet_text
         text = '\n'.join(tw.wrap(text))
         tweets.append((text,int(round(time.time() * 1000))))
         update_text()
@@ -64,6 +92,28 @@ class StdOutListener(StreamListener):
 
     def on_error(self, status):
         print status
+
+    def calculate_effect(self, tweet_text):
+        if tweet_text.contains(smiley_face):
+            return smiley_face
+        if tweet_text.contains(vertical_hold):
+            return vertical_hold
+        if tweet_text.contains(trippy_colours):
+            return trippu_colours
+        if tweet_text.contains(effect_off) and admin:
+            return effect_off
+        return effect
+
+    def calculate_screen(self, tweet_text):
+        if tweet_text.contains(pic_in_pic):
+            return pic_in_pic
+        if tweet_text.contains(full_video):
+            return full_video
+        if tweet_text.contains(full_camera):
+            return full_camerac
+        if tweet_text.contains(off) and admin:
+            return off
+        return screen_size
 
 if __name__ == '__main__': 
     l = StdOutListener()
@@ -83,7 +133,7 @@ def update_text():
   millis = int(round(time.time() * 1000))
   x = []
   for t in tweets:
-    if millis - t[1] < 15000:
+    if millis - t[1] < 60000:
       x.append(t)
   tweets = x
   text = '\n\n'.join([x[0] for x in tweets[:4]])
@@ -109,7 +159,8 @@ def on_position_change(instance, value):
     texture = Texture.create(size=(feed_width, feed_height))
     texture.blit_buffer(feed_data, colorfmt='rgb', bufferfmt='ubyte')
     instance.canvas.after.clear()
-    instance.canvas.after.add(Rectangle(texture=texture, pos=(instance.width - feed_width, instance.height-feed_height), size=(feed_width, feed_height)))
+    instance.canvas.after.add(Rectangle(texture=texture, pos=(0,0), size=(instance.width, instance.height)))
+#    instance.canvas.after.add(Rectangle(texture=texture, pos=(instance.width - feed_width, instance.height-feed_height), size=(feed_width, feed_height)))
     feed_ready = False
 
 def on_key(instance, keyboard, keycode, text, modifiers):
@@ -160,7 +211,24 @@ feed_data = None
 feed_width = 1
 feed_height = 1
 feed_ready = False
-        
+
+face_cascade = cv2.CascadeClassifier('/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml')
+
+faces = None
+
+def detect_faces(img):
+    global faces
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    for (x,y,w,h) in faces:
+        cv2.circle(img, (x+w/2, y+h/2), w/2, (0,255,255), -1 )
+        cv2.circle(img, (x+w/3, y+h/5), w/10, (0,0,0), -1 )
+        cv2.circle(img, (x+2*w/3, y+h/5), w/10, (0,0,0), -1 )
+        cv2.circle(img, (x+w/2, y+3*h/4), w/5, (0,0,0), -1 )
+        cv2.circle(img, (x+w/2, y+h/2), w/2, (0,0,0), 3 )
+    return img       
+ 
 class VideoPlayerApp(App):
 
     def build(self):
@@ -187,6 +255,10 @@ class VideoPlayerApp(App):
     
     def get_feed(self):
       global a_time_to_die, feed_data, feed_width, feed_height, feed_ready
+      scanner = zbar.ImageScanner()
+      scanner.parse_config('enable')
+      shift = 1
+
       while 1: 
         if a_time_to_die:
           return
@@ -201,12 +273,41 @@ class VideoPlayerApp(App):
           data = pickle.loads(data)
           #print 'Received img' 
           height, width, depth = data.shape
+          try:
+#            print "qr time"
+#            pil_im = Image.fromarray(data)
+#            image = zbar.Image(width, height, 'Y800', pil_im.tostring())
+#            scanner.scan(image)
+#            for symbol in image:
+#              print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+#            del(image)
+#          except:
+#            print "qr fail"
+
+#            data = cv2.flip(detect_faces(cv2.flip(data, 0)),0)
+#          except:
+#            print "face fail"
+
+            shift += 1
+            data += shift % 256
+          except:
+            print "shift fail"
+
+#            shift += 10
+ #           M = numpy.float32([[1,0,0],[0,1,shift%height]])
+  #          data1 = cv2.warpAffine(data,M,(width,height))
+   #         M = numpy.float32([[1,0,0],[0,1,(shift%height)-height]])
+    #        data2 = cv2.warpAffine(data,M,(width,height))
+     #       data = data1 + data2
+      #    except:
+       #     print "vhold fail"
+
           data = cv2.cvtColor(data,cv2.COLOR_BGR2RGB)
           feed_data = data.tostring()
           feed_width = width
           feed_height = height
           feed_ready = True
-          sleep(.05)
+          sleep(.001)
         except: 
           s.close()
           print("fail")
