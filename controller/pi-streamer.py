@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
+
+import sys
+
+if len(sys.argv) < 3:
+  print "I need the IP to pull from and the port to share on"
+  exit (1)
+
 import cv2
 import os
 import gi
@@ -35,7 +42,7 @@ class Player(Gtk.Window):
         # Disable Double Buffered
         self.video_area.set_double_buffered(False)
         # playbin
-        self.player = Gst.parse_launch("tcpclientsrc host=192.168.1.221 port=5000 ! gdpdepay ! rtph264depay ! avdec_h264 ! videoconvert ! xvimagesink name=xv")
+        self.player = Gst.parse_launch("tcpclientsrc host=" + sys.argv[1] +" port=5000 ! gdpdepay ! rtph264depay ! avdec_h264 ! videoconvert ! xvimagesink name=xv")
         bus = self.player.get_bus()
         bus.add_signal_watch()
         bus.enable_sync_message_emission()
@@ -99,7 +106,7 @@ class Player(Gtk.Window):
 def start_server():
   global a_time_to_die
   HOST = ''                 # Symbolic name meaning the local host
-  PORT = 12345              # Arbitrary non-privileged port  
+  PORT = int(argv[2])              # Arbitrary non-privileged port  
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   socket.timeout(10)
   try:
