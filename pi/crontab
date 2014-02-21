@@ -1,0 +1,2 @@
+@reboot sleep 15 ; sendEmail -f player@chemical-clothing.com -t jonducrou@gmail.com -u `hostname`:`hostname -I` -s mail.chemical-clothing.com:587 -xu players@chemical-clothing.com -xp <password> -m "yeah"
+
