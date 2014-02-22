@@ -52,9 +52,11 @@ tw = textwrap.TextWrapper(width=80)
 
 #effects
 smiley_face="smiles abound"
+target_face="target acquired"
 vertical_hold="up and to the right"
 trippy_colours="atomic"
 trippy_colours_2="mario"
+colour_band="scan"
 effect_off="shut it down"  #admin effect
 
 #screen sizes
@@ -111,12 +113,18 @@ class StdOutListener(StreamListener):
         global effect
         if smiley_face in tweet_text:
             return smiley_face
+        if target_face in tweet_text:
+            return target_face
         if vertical_hold in tweet_text:
             return vertical_hold
         if trippy_colours in tweet_text:
             return trippy_colours
+        if trippy_colours_2 in tweet_text:
+            return trippy_colours_2
         if effect_off in tweet_text:
             return effect_off
+        if colour_band in tweet_text:
+            return colour_band
         return effect
 
     def calculate_screen(self, tweet_text):
@@ -265,11 +273,34 @@ def detect_faces(img):
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     for (x,y,w,h) in faces:
+        #face
         cv2.circle(img, (x+w/2, y+h/2), w/2, (0,255,255), -1 )
+        #eyes
         cv2.circle(img, (x+w/3, y+h/5), w/10, (0,0,0), -1 )
         cv2.circle(img, (x+2*w/3, y+h/5), w/10, (0,0,0), -1 )
-        cv2.circle(img, (x+w/2, y+3*h/4), w/5, (0,0,0), -1 )
+        #mouth
+#        cv2.circle(img, (x+w/2, y+3*h/4), w/5, (0,0,0), -1 )
+        cv2.line(img, (x+4*w/10, y+3*h/4),(x+6*w/10, y+3*h/4), (0,0,0), 3 )
+        #face edge
         cv2.circle(img, (x+w/2, y+h/2), w/2, (0,0,0), 3 )
+    return img       
+
+def detect_faces_2(img):
+    global faces
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    shift -= 1
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    for (x,y,w,h) in faces:
+        #box
+        cv2.rectangle(img, (x,y), (x+w, y+h), (0,255,0), 3 )
+        #target
+        s = w/5 
+        cv2.line(img, (x+2/w-s, y+h/2), (x+2/w+s, y+h/2), (0,255,0), 2 )
+        cv2.line(img, (x+2/w, y+h/2-s), (x+2/w, y+h/2+s), (0,255,0), 2 )
+        #circle
+        s *= 3
+        s = (shift % s) + 1 
+        cv2.circle(img, (x+w/2, y+h/2), s, (0,255,0), -1 )
     return img       
  
 class VideoPlayerApp(App):
@@ -322,6 +353,11 @@ class VideoPlayerApp(App):
             data = cv2.flip(detect_faces(cv2.flip(data, 0)),0)
            except:
             print "face fail"
+          elif effect == target_face:
+           try:
+            data = cv2.flip(detect_faces_2(cv2.flip(data, 0)),0)
+           except:
+            print "face 2 fail"
           elif effect == trippy_colours:
            try:
             shift += 1
@@ -349,6 +385,20 @@ class VideoPlayerApp(App):
             M = numpy.float32([[1,0,(shift%width)-width],[0,1,0]])
             data2 = cv2.warpAffine(data,M,(width,height))
             data = data1 + data2
+           except:
+            print "vhold fail"
+          elif effect == colour_band:
+           try:
+            shift += 5
+            b = height / 20
+            top = shift % (width - b) 
+            # band of colour
+            data_g = cv2.cvtColor(cv2.cvtColor(data, cv2.COLOR_BGR2GRAY), cv2.CV_GRAY2BGR)
+            data_g[0:width, top:top+b] = data[0:width, top:top+b]
+            data = data_g
+            # inversion
+            data_i = 255 - data
+            data[0:width, top:top+b] = data_i[0:width, top:top+b]
            except:
             print "vhold fail"
 
