@@ -26,6 +26,8 @@ import numpy
 import pickle
 from functools import partial
 
+from random import shuffle
+
 from PIL import Image
 import zbar
 
@@ -62,8 +64,16 @@ off="off"    #admin control
 
 #initial values
 effect=effect_off
-screen_size=pic_in_pic
+screen_size=full_video
 admin=False
+
+from os import listdir
+from os.path import isfile, join
+mypath="../../Farewell/Video/"
+onlyfiles = [ join(mypath,f) for f in listdir(mypath) if isfile(join(mypath,f)) ]
+
+shuffle(onlyfiles)
+movie_index = 1
 
 class StdOutListener(StreamListener):
     """ A listener handles tweets are the received from the stream.
@@ -95,17 +105,21 @@ class StdOutListener(StreamListener):
         print status
 
     def calculate_effect(self, tweet_text):
+        global effect
         if smiley_face in tweet_text:
             return smiley_face
         if vertical_hold in tweet_text:
             return vertical_hold
         if trippy_colours in tweet_text:
             return trippy_colours
-        if effect_off in tweet_text and admin:
+        if effect_off in tweet_text:
             return effect_off
         return effect
 
     def calculate_screen(self, tweet_text):
+        global effect, admin
+        if effect == off and not admin:
+          return
         if pic_in_pic in tweet_text:
             return pic_in_pic
         if full_video in tweet_text:
@@ -156,17 +170,34 @@ def on_position_change(instance, value=0):
   if int(value) > pv:
     pv = value
 
+def on_eos(instance, value=0):
+  global movie_index
+  print "EOS!!!!"
+  movie_index += 1
+  instance.source = onlyfiles[movie_index]
+  instance.state = "play"
+
 def camera_loop(instance, dt=0):
   global feed_ready
   if feed_ready:  
+    feed_ready = False
+    if screen_size == off:
+      texture = Texture.create(size=(1, 1),rgb=(0,0,0))
+      instance.canvas.after.add(Rectangle(texture=texture, pos=(0,0), size=(instance.width, instance.height)))
+      return
+      
     texture = Texture.create(size=(feed_width, feed_height))
     texture.blit_buffer(feed_data, colorfmt='rgb', bufferfmt='ubyte')
     instance.canvas.after.clear()
 # FULL SCREEN
-    instance.canvas.after.add(Rectangle(texture=texture, pos=(0,0), size=(instance.width, instance.height)))
+    if screen_size == full_camera:
+      instance.canvas.after.add(Rectangle(texture=texture, pos=(0,0), size=(instance.width, instance.height)))
 # PIC IN PIC
-#    instance.canvas.after.add(Rectangle(texture=texture, pos=(instance.width - feed_width, instance.height-feed_height), size=(feed_width, feed_height)))
-    feed_ready = False
+    elif screen_size == pic_in_pic:
+      instance.canvas.after.add(Rectangle(texture=texture, pos=(instance.width - feed_width, instance.height-feed_height), size=(feed_width, feed_height)))
+    elif screen_size == full_video:
+      pass
+        
 
 def on_key(instance, keyboard, keycode, text, modifiers):
         global a_time_to_die
@@ -176,7 +207,7 @@ def on_key(instance, keyboard, keycode, text, modifiers):
            a_time_to_die = True
            exit(0)
 
-tweet = Label(text='Hello! ',pos=(0,-180), markup=True, font_size=28)
+tweet = Label(text='Hello! ',pos=(0,0), markup=True, font_size=28)
 
 
 
@@ -241,14 +272,14 @@ class VideoPlayerApp(App):
         if len(argv) > 1:
             filename = argv[1]
         else:
-            curdir = dirname(__file__)
-            filename = join(curdir, 'softboy.avi')
+          print "No Video!"
+          filename = None
         Window.clearcolor = (0, 0, 0, 1)
         layout = FloatLayout(size=(300, 300))
         self.v = FullVideo(source=filename, state='play', volume = 0, options={'allow_stretch': True})#, pos_hint={'y':.2})
         Clock.schedule_interval(partial(camera_loop, self.v), 0.05)
         Clock.schedule_interval(update_text,1)
-        self.v.bind(position=on_position_change)
+        self.v.bind(position=on_position_change, eos=on_eos)
         layout.add_widget(self.v)
         Window.bind(on_key_down=on_key)
         layout.add_widget(tweet)
