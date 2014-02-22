@@ -51,10 +51,11 @@ access_token_secret="u6U0zXHkaxwI6O1qtLcu94wgn6DY7teCUiZaWjS7RS8Nl"
 tw = textwrap.TextWrapper(width=80)
 
 #effects
-smiley_face="smiley face"
-vertical_hold="vhold"
-trippy_colours="trippy"
-effect_off="effect off"  #admin effect
+smiley_face="smiles abound"
+vertical_hold="up and to the right"
+trippy_colours="atomic"
+trippy_colours_2="mario"
+effect_off="shut it down"  #admin effect
 
 #screen sizes
 pic_in_pic="pic in pic"
@@ -86,10 +87,12 @@ class StdOutListener(StreamListener):
           return False
         user_name = json.loads(data)['user']['screen_name'].encode('utf-8')
         tweet_text = json.loads(data)['text'].encode('utf-8')
-        if user_name == "kangahooroo":
+        if user_name.lower() == "kangahooroo":
             admin = True
-        effect = self.calculate_effect(tweet_text)
-        screen_size = self.calculate_screen(tweet_text)
+        if "skip" in tweet_text.lower(): 
+          on_eos(video_object)
+        effect = self.calculate_effect(tweet_text.lower())
+        screen_size = self.calculate_screen(tweet_text.lower())
         admin = False  #set back to false after calculating effect so admin doesn't stay on
         text = "[b]"
         text += user_name
@@ -136,7 +139,7 @@ if __name__ == '__main__':
     auth.set_access_token(access_token, access_token_secret)
 
     stream = Stream(auth, l)
-    stream.filter(track=['piano'], async=True)
+    stream.filter(track=['@kangahooroo'], async=True)
     print "Twitter enabled"
 
 
@@ -174,6 +177,8 @@ def on_eos(instance, value=0):
   global movie_index
   print "EOS!!!!"
   movie_index += 1
+  if movie_index >= len(onlyfiles):
+    movie_index = 0
   instance.source = onlyfiles[movie_index]
   instance.state = "play"
 
@@ -252,6 +257,8 @@ face_cascade = cv2.CascadeClassifier('/usr/share/opencv/haarcascades/haarcascade
 
 faces = None
 
+video_object = None
+
 def detect_faces(img):
     global faces
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -268,12 +275,11 @@ def detect_faces(img):
 class VideoPlayerApp(App):
 
     def build(self):
-        global feed_thread
+        global feed_thread, video_object
         if len(argv) > 1:
             filename = argv[1]
         else:
-          print "No Video!"
-          filename = None
+          filename = onlyfiles[0]
         Window.clearcolor = (0, 0, 0, 1)
         layout = FloatLayout(size=(300, 300))
         self.v = FullVideo(source=filename, state='play', volume = 0, options={'allow_stretch': True})#, pos_hint={'y':.2})
@@ -285,7 +291,7 @@ class VideoPlayerApp(App):
         layout.add_widget(tweet)
         feed_thread = Thread(target = self.get_feed)
         feed_thread.start()
-
+        video_object = self.v
         return layout
 
 
@@ -311,26 +317,27 @@ class VideoPlayerApp(App):
           data = pickle.loads(data)
           #print 'Received img' 
           height, width, depth = data.shape
-          try:
-#            print "qr time"
-#            pil_im = Image.fromarray(data)
-#            image = zbar.Image(width, height, 'Y800', pil_im.tostring())
-#            scanner.scan(image)
-#            for symbol in image:
-#              print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
-#            del(image)
-#          except:
-#            print "qr fail"
-
-#            data = cv2.flip(detect_faces(cv2.flip(data, 0)),0)
- #         except:
-  #          print "face fail"
-
-#            shift += 1
- #           data += shift % 256
-  #        except:
-   #         print "shift fail"
-
+          if effect == smiley_face:
+           try:
+            data = cv2.flip(detect_faces(cv2.flip(data, 0)),0)
+           except:
+            print "face fail"
+          elif effect == trippy_colours:
+           try:
+            shift += 1
+            data += shift % 256
+           except:
+            print "shift fail"
+          elif effect == trippy_colours_2:
+           try:
+            shift += 1
+            for x in xrange(shift % 3):
+              data2 = cv2.copy(data)
+              cv2.mixChannels(data2,data, [(0,1),(1,2),(2,1)])
+           except:
+            print "mario fail"
+          elif effect == vertical_hold:
+           try:
             shift += 10
             M = numpy.float32([[1,0,0],[0,1,shift%height]])
             data1 = cv2.warpAffine(data,M,(width,height))
@@ -342,7 +349,7 @@ class VideoPlayerApp(App):
             M = numpy.float32([[1,0,(shift%width)-width],[0,1,0]])
             data2 = cv2.warpAffine(data,M,(width,height))
             data = data1 + data2
-          except:
+           except:
             print "vhold fail"
 
           data = cv2.cvtColor(data,cv2.COLOR_BGR2RGB)
