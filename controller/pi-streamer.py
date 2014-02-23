@@ -106,7 +106,7 @@ class Player(Gtk.Window):
 def start_server():
   global a_time_to_die
   HOST = ''                 # Symbolic name meaning the local host
-  PORT = int(argv[2])              # Arbitrary non-privileged port  
+  PORT = int(sys.argv[2])              # Arbitrary non-privileged port  
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   socket.timeout(10)
   try:

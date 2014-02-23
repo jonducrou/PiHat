@@ -60,14 +60,14 @@ colour_band="scan"
 effect_off="shut it down"  #admin effect
 
 #screen sizes
-pic_in_pic="pic in pic"
-full_video="video"
-full_camera="camera"
+pic_in_pic="little camera"
+full_video="watch the video"
+full_camera="helmet cam"
 off="off"    #admin control
 
 #initial values
 effect=effect_off
-screen_size=full_video
+screen_size=pic_in_pic
 admin=False
 
 from os import listdir
@@ -136,7 +136,7 @@ class StdOutListener(StreamListener):
         if full_video in tweet_text:
             return full_video
         if full_camera in tweet_text:
-            return full_camerac
+            return full_camera
         if off in tweet_text and admin:
             return off
         return screen_size
